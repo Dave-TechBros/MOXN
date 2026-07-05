@@ -1,0 +1,6 @@
+{
+  "name": "MOXN",
+  "description": "A premium Community News & Gist Platform with professional editorial workflows, role-based analytics, and collaborative newsroom moderation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
