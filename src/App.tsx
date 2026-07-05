@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { 
   Clock, 
@@ -378,6 +378,7 @@ export default function App() {
   const [followingIds, setFollowingIds] = useState<string[]>([]);
   const [activeUser, setActiveUser] = useState<User>(getActiveUser());
   const [loading, setLoading] = useState<boolean>(true);
+  const loadBaseDataId = useRef(0);
 
   // Message banners
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -388,6 +389,7 @@ export default function App() {
   };
 
   const loadBaseData = async () => {
+    const callId = ++loadBaseDataId.current;
     setLoading(true);
     try {
       // Self-heal session: check if the logged in active user still exists on the server.
@@ -397,11 +399,14 @@ export default function App() {
         try {
           const profileData = await api.getProfile(currentUser.id);
           if (profileData && profileData.user) {
-            setApiActiveUser(profileData.user);
-            setActiveUser(profileData.user);
             currentUser = profileData.user;
+            if (callId === loadBaseDataId.current) {
+              setApiActiveUser(profileData.user);
+              setActiveUser(profileData.user);
+            }
           }
         } catch (profileErr: any) {
+          if (callId !== loadBaseDataId.current) return;
           if (currentUser.id !== "guest") {
             console.warn("Active user not found on server, attempting transparent session restore:", profileErr);
             const credsStr = localStorage.getItem("moxn_user_credentials");
@@ -419,6 +424,7 @@ export default function App() {
                     bio: creds.bio,
                     avatar: creds.avatar
                   });
+                  if (callId !== loadBaseDataId.current) return;
                   // Update local storage and reference to match the restored user
                   setApiActiveUser(response.user);
                   setActiveUser(response.user);
@@ -433,6 +439,8 @@ export default function App() {
         }
       }
 
+      if (callId !== loadBaseDataId.current) return;
+
       const [cats, arts, wrts, bkmks, lks] = await Promise.all([
         api.getCategories(),
         api.getArticles(),
@@ -440,6 +448,8 @@ export default function App() {
         currentUser.id ? api.getBookmarks() : Promise.resolve([]),
         currentUser.id ? api.getMyLikes() : Promise.resolve([])
       ]);
+
+      if (callId !== loadBaseDataId.current) return;
 
       setCategories(cats);
       setArticles(arts);
@@ -457,7 +467,9 @@ export default function App() {
     } catch (err) {
       console.error("Failed to sync client with database API:", err);
     } finally {
-      setLoading(false);
+      if (callId === loadBaseDataId.current) {
+        setLoading(false);
+      }
     }
   };
 

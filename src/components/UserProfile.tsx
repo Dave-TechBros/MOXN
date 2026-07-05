@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   User as UserIcon, 
   Mail, 
@@ -64,14 +64,17 @@ export default function UserProfile({ activeUser, viewParams, onNavigate, trigge
   const [editName, setEditName] = useState("");
   const [editBio, setEditBio] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
+  const fetchProfileDataId = useRef(0);
 
   const fetchProfileData = async () => {
+    const callId = ++fetchProfileDataId.current;
     try {
       setLoading(true);
       const [data, bookmarksData] = await Promise.all([
         api.getProfile(targetUserId),
         isMe ? api.getBookmarks() : Promise.resolve([])
       ]);
+      if (callId !== fetchProfileDataId.current) return;
       setProfile(data.user);
       setArticles(data.articles || []);
       setLikedArticles(data.likedArticles || []);
@@ -90,6 +93,7 @@ export default function UserProfile({ activeUser, viewParams, onNavigate, trigge
         setActiveTab("publications");
       }
     } catch (err) {
+      if (callId !== fetchProfileDataId.current) return;
       console.error("Failed to load profile", err);
       if (isMe && activeUser) {
         setProfile(activeUser);
@@ -105,7 +109,9 @@ export default function UserProfile({ activeUser, viewParams, onNavigate, trigge
         triggerBanner("error", "Failed to retrieve profile data.");
       }
     } finally {
-      setLoading(false);
+      if (callId === fetchProfileDataId.current) {
+        setLoading(false);
+      }
     }
   };
 

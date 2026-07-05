@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   Search, 
   Bell, 
@@ -50,6 +50,7 @@ export default function Navbar({
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
   const [allWriters, setAllWriters] = useState<User[]>([]);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const fetchNavbarDataId = useRef(0);
 
   // Simulation Users
   const simUsers: User[] = [
@@ -100,12 +101,14 @@ export default function Navbar({
   ];
 
   const fetchNavbarData = async () => {
+    const callId = ++fetchNavbarDataId.current;
     try {
       const [cats, notifs, writers] = await Promise.all([
         api.getCategories(),
         currentUser.role !== "Reader" ? api.getNotifications() : Promise.resolve([]),
         api.getWriters()
       ]);
+      if (callId !== fetchNavbarDataId.current) return;
       setCategories(cats);
       setNotifications(notifs);
       setAllWriters(writers);
