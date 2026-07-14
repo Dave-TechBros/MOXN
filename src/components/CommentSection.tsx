@@ -392,7 +392,7 @@ export default function CommentSection({ articleId, articleAuthorId, onNavigate,
             className="w-full p-4 text-xs border border-gray-200 rounded-2xl bg-white shadow-sm focus:outline-none focus:border-blue-500 transition-all"
             rows={3}
           />
-          {activeUser.id ? (
+          {activeUser.id && activeUser.id !== "guest" ? (
             <div className="absolute bottom-2.5 right-2.5 flex items-center space-x-2">
               <span className="text-[10px] text-gray-400 font-medium mr-1">Posting as <span className="font-bold text-gray-700">{activeUser.name}</span></span>
               <button
@@ -406,7 +406,7 @@ export default function CommentSection({ articleId, articleAuthorId, onNavigate,
             <div className="absolute inset-0 bg-gray-50/70 backdrop-blur-[1px] rounded-2xl flex items-center justify-center">
               <div className="text-center">
                 <Lock className="w-5 h-5 text-gray-400 mx-auto" />
-                <p className="text-xs font-bold text-gray-600 mt-1">Reader accounts are read-only. Switch role in navbar.</p>
+                <p className="text-xs font-bold text-gray-600 mt-1">Please sign in to join the discussion.</p>
               </div>
             </div>
           )}

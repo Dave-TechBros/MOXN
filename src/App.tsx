@@ -204,7 +204,7 @@ function ArticleView({
         <div className="flex items-center space-x-3 text-[10px] font-bold">
           <span className="text-gray-400 bg-gray-50 px-2.5 py-1 rounded font-mono">{getReadTime(article.body)}</span>
           
-          {activeUser.id !== article.authorId && (
+          {activeUser.id !== article.authorId && activeUser.id !== "guest" && (
             <button
               onClick={() => handleToggleFollow(article.authorId)}
               className={`px-3 py-1.5 rounded-full flex items-center space-x-1 ${isFollowing ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
@@ -423,28 +423,40 @@ export default function App() {
 
       if (callId !== loadBaseDataId.current) return;
 
-      const [cats, arts, wrts, bkmks, lks] = await Promise.all([
+      const isGuest = currentUser.id === "guest";
+
+      const [cats, arts, wrts] = await Promise.all([
         api.getCategories(),
         api.getArticles(),
         api.getWriters(),
-        currentUser.id ? api.getBookmarks() : Promise.resolve([]),
-        currentUser.id ? api.getMyLikes() : Promise.resolve([])
       ]);
+
+      let bkmks, lks;
+      if (!isGuest) {
+        [bkmks, lks] = await Promise.all([
+          api.getBookmarks(),
+          api.getMyLikes(),
+        ]);
+      }
 
       if (callId !== loadBaseDataId.current) return;
 
       setCategories(cats);
       setArticles(arts);
       setWriters(wrts);
-      setBookmarkedIds(bkmks.map((b: any) => b.id));
-      setLikedIds(lks);
+      setBookmarkedIds(bkmks ? bkmks.map((b: any) => b.id) : []);
+      setLikedIds(lks || []);
 
       // Simple local track of followed writers
-      const simulatedFollowing = localStorage.getItem(`moxn_following_${currentUser.id}`);
-      if (simulatedFollowing) {
-        setFollowingIds(JSON.parse(simulatedFollowing));
+      if (!isGuest) {
+        const simulatedFollowing = localStorage.getItem(`moxn_following_${currentUser.id}`);
+        if (simulatedFollowing) {
+          setFollowingIds(JSON.parse(simulatedFollowing));
+        } else {
+          setFollowingIds(["user-writer-1"]); // Default seed follow Sarah Jenkins
+        }
       } else {
-        setFollowingIds(["user-writer-1"]); // Default seed follow Sarah Jenkins
+        setFollowingIds([]);
       }
     } catch (err) {
       console.error("Failed to sync client with database API:", err);
@@ -525,6 +537,10 @@ export default function App() {
   };
 
   const handleToggleFollow = async (id: string) => {
+    if (activeUser.id === "guest") {
+      triggerBanner("error", "Please sign in to follow contributors.");
+      return;
+    }
     try {
       const resp = await api.toggleFollow(id);
       setWriters(prev => prev.map(w => w.id === id ? { ...w, followersCount: resp.followersCount } : w));
@@ -910,7 +926,7 @@ export default function App() {
                 <div className="flex items-center justify-between border-t border-gray-50 pt-4 text-[10px] text-gray-400 font-bold">
                   <span>{writer.followersCount.toLocaleString()} Followers</span>
                   
-                  {activeUser.id !== writer.id && (
+                  {activeUser.id !== writer.id && activeUser.id !== "guest" && (
                     <button
                       onClick={() => handleToggleFollow(writer.id)}
                       disabled={isSuspended}
